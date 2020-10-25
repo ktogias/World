@@ -18,5 +18,5 @@ extensions:
             PACT_PROVIDER_NAME: WorldService
             PACT_PROVIDER_BASE_URL: http://localhost
             PACT_BROKER_URI: https://ktogias.pactflow.io
-            PACT_BROKER_BEARER_TOKEN: oodRjL7Awzl49XtsCC9Ikg
+            PACT_BROKER_BEARER_TOKEN: <token>
         - CodeceptionPactPhp\Extension\Pact

@@ -31,7 +31,7 @@ class WorldCest
         $this->veriferConfig->setProviderBaseUrl(new \GuzzleHttp\Psr7\Uri('http://localhost'));
 
         $this->brokerHttpClient = new BrokerHttpClient(new GuzzleClient(), $this->veriferConfig->getBrokerUri(), [
-            'Authorization' => 'Bearer oodRjL7Awzl49XtsCC9Ikg',     
+            'Authorization' => 'Bearer <token>',     
         ]);
    
         $this->verifier = new ExtendedVerifier($this->veriferConfig, null, null, $this->brokerHttpClient);
