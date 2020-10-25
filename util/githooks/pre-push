@@ -1,0 +1,40 @@
+#!/bin/bash
+
+echo 'Building test image...'
+docker build -t hello-test --target test .
+status=$?
+if [ $status -ne 0 ]
+then
+    echo "Failed building testing environment"
+    exit $status
+fi
+
+echo 'Running unit tests...'
+docker run hello-test ./vendor/bin/codecept run unit
+status=$?
+if [ $status -ne 0 ]
+then
+    echo "Unit tests fail"
+    exit $status
+fi
+
+echo 'Running functional tests...'
+docker run hello-test ./vendor/bin/codecept run functional
+if [ $status -ne 0 ]
+then
+    echo "Functional tests fail"
+    exit $status
+fi
+
+echo 'Running acceptance tests...'
+docker run -d --name hello-test --rm hello-test
+docker exec hello-test ./vendor/bin/codecept run acceptance
+status=$?
+docker stop hello-test
+if [ $status -eq 0 ]
+then
+    echo "Success"
+else
+    echo "Acceptance tests fail"
+fi
+exit $status

@@ -1,0 +1,53 @@
+stages:
+    - Prepare test environment
+    - Unit test
+    - Pact test
+    - Merge and push
+    - Clean up test environment
+    
+Build test image:
+    stage: Prepare test environment
+    before_script:
+        - docker info
+    script: 
+        - docker build -t hello-test-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHA --target test .
+        - docker run -d --name hello-test-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHA --rm hello-test-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHA
+            
+Run unit and code coverage tests:
+    stage: Unit test
+    script: 
+        - docker exec hello-test-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHA ./vendor/bin/codecept run unit --xml --coverage --coverage-html --coverage-xml
+        - docker cp hello-test-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHA:./php/tests/_output/ ./php/tests/_output
+        - export CURRENT_COVERAGE_DIR=./php/tests/_output
+        - export PREVIOUS_COVERAGE_DIR=/var/www/testoutput/$CI_PROJECT_ID/$CI_COMMIT_REF_NAME/_output
+        - mkdir -p $PREVIOUS_COVERAGE_DIR | true
+        - bash ./util/test_code_coverage.sh $CURRENT_COVERAGE_DIR/coverage.xml $PREVIOUS_COVERAGE_DIR/coverage.xml
+        - cp -a $CURRENT_COVERAGE_DIR/* $PREVIOUS_COVERAGE_DIR
+       
+Run pactProvider tests:
+    stage: Pact test
+    script: 
+        - docker exec hello-test-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHA ./vendor/bin/codecept run pactProvider --xml --coverage --coverage-html --coverage-xml
+         
+
+Merge and push trunk:
+    stage: Merge and push
+    except: 
+        - trunk
+    script: 
+        - git fetch
+        - git checkout trunk
+        - git pull
+        - git merge origin/master
+        - git merge origin/$CI_COMMIT_REF_NAME
+        - git config --global user.name "cirunner"
+        - git config --global user.email "gitlab-runner@ntsdev2.sch.gr"
+        - git push git@150.140.26.209:Microservices/HelloWorld/HelloService.git HEAD:trunk   
+
+Clean up:
+    stage: Clean up test environment
+    when: always
+    script: 
+        - docker stop hello-test-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHA
+        - docker rm hello-test-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHA || true
+        - docker rmi hello-test-$CI_COMMIT_REF_NAME-$CI_COMMIT_SHA || true

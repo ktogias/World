@@ -1,0 +1,13 @@
+{
+    "require-dev": {
+        "phpunit/php-code-coverage": "^8.0",
+        "codeception/codeception": "^4.1",
+        "codeception/module-phpbrowser": "^1.0.0",
+        "codeception/module-asserts": "^1.0.0",
+        "guzzlehttp/guzzle": "7.0.1 as 6.5.5",
+        "tienvx/codeception-pact-php-extension": "^1.0"
+    },
+    "require": {
+        "hirak/prestissimo": "^0.3.10"
+    }
+}

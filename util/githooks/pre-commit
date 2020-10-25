@@ -1,0 +1,68 @@
+#!/bin/bash
+
+STOP_DEV=false;
+
+if [ "$( docker container inspect -f '{{.State.Status}}' hello-dev )" != "running" ]
+then
+    echo 'Setting up dev environment...'
+    docker build -t hello-dev --target dev .
+    docker run -d --volume ./php:/php:Z --name hello-dev --rm hello-dev
+    STOP_DEV=true;
+fi
+
+echo 'Running unit tests...'
+docker exec hello-dev ./vendor/bin/codecept run unit --coverage --coverage-xml
+status=$?
+if [ $status -ne 0 ]
+then
+    echo "Unit tests fail"
+    if $STOP_DEV
+    then
+        docker stop hello-dev
+    fi
+    exit $status
+fi
+
+echo 'Checking code coverage...'
+ELEMENTS=$(xmllint --xpath "string(/coverage/project/metrics/@elements)" ./php/tests/_output/coverage.xml)
+COVEREDELEMENTS=$(xmllint --xpath "string(/coverage/project/metrics/@coveredelements)" ./php/tests/_output/coverage.xml)
+RATIO=$(bc <<< 'scale=4; '$COVEREDELEMENTS/$ELEMENTS)
+if [ $RATIO \< ".70" ]
+then
+    echo "Code coverage below 70%"
+    if $STOP_DEV
+    then
+        docker stop hello-dev
+    fi
+    exit 1
+fi
+
+echo 'Running functional tests...'
+docker exec hello-dev ./vendor/bin/codecept run functional
+if [ $status -ne 0 ]
+then
+    echo "Functional tests fail"
+    if $STOP_DEV
+    then
+        docker stop hello-dev
+    fi
+    exit $status
+fi
+
+echo 'Running acceptance tests...'
+docker exec hello-dev ./vendor/bin/codecept run acceptance
+status=$?
+if [ $status -eq 0 ]
+then
+    echo "Success"
+else
+    echo "Acceptance tests fail"
+fi
+
+if $STOP_DEV
+then
+    docker stop hello-dev
+fi
+
+exit $status
+
